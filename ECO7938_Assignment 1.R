@@ -58,6 +58,12 @@ summary(DataVisits_high_inc$insurance) # show the details of sample on ownership
 #  no  yes 
 #  150 1034 
 #A: 1034
+#Q: How many have medicaid?
+summary(DataVisits_high_inc$medicaid) # show the details of sample on ownership of medicaid
+#  no  yes 
+#  1151   33 
+#A: 33
+
 
 ##13
 reg <- lm(visits ~ insurance + medicaid, data = DataVisits) # regression visits on insurance and medicaid
