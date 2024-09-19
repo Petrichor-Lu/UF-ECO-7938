@@ -1,0 +1,217 @@
+# Assignment  3
+
+#### **Instructor: Prof. Gunnar Heins**
+
+#### **Teaching Assistant: Pedro de Sousa Almeida**
+
+#### Student:    C.H.(Chenhui Lu)
+
+#### UFID:       76982846
+
+===============================================================================
+
+```{r}
+# Empty Environment
+rm(list = ls()) 
+library("data.table")
+```
+
+```{r}
+#library
+library("data.table")
+library(stargazer)
+library("AER")
+library(ggplot2)
+```
+
+### **1 Working with Datasets (40 points)**
+
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/Assgnments/Git/UF-ECO-7938/3/Pic/1.png")
+```
+```{r}
+library(fueleconomy)
+CarData <- as.data.table(vehicles)
+```
+
+#### 1. Plot the total number of car models over time (use either plot() or ggplot2)
+
+```{r}
+model_no <- CarData[, .N, by = year]    #make a set of x = year, y = number
+ggplot(model_no, aes(year, N)) + geom_point() + ggtitle("Car models over time") + theme(plot.title = element_text(hjust = 0.5)) + geom_smooth()                                  #ggplot
+```
+
+#### 2. Plot the average fuel effciency on highways, hwy, over time. What do you find?
+
+```{r}
+av_hwy <- CarData[, mean(hwy), by = year]       #make a set with x = year, y = mean        
+P2 <- ggplot(av_hwy,aes(year, V1)) + geom_point()   #ggplot
+P2 + labs(title = "average fuel effciency on  hwy over time", x = "year", y ="average fuel effciency") + theme(plot.title = element_text(hjust = 0.5)) + geom_smooth()  # edit the labels
+```
+The chart shows that the average fuel effcicency on highways remained stable for a period but shows a significant increase after around 2007, potentially due to technological improvements.
+
+#### 3.Keep only those car brands that have at least 1000 observations in the dataset over allyears.
+
+```{r}
+make_over <- CarData[, if(.N >= 1000) .SD, by = make]     # only thodr make's number >= 1000
+make_over[, .SD[1], by = make]$make         # only keep one subset of the same make and show the name
+```
+
+#### 4.Regress hwy on make and cty without a constant. What does this tell you about the fuel effciency of each brand?
+```{r}
+reg_1 <- lm(hwy ~ 0 + make + cty ,data = make_over) #regression without the constant
+summary(reg_1)
+```
+1. The coefficients of make actually present their fuel efficiency compared with other brands. For instance, the BMW is the mots fuel efficient brand, and compared with Toyota, BMW can drive 2.82 miles more than Toyota.
+
+2. The city fuel economy positive affects the hwy, 1 unit cty higher, 1.05 unit hwy higher.
+
+#### 5. Run the same regression as in Part (4), but include a constant this time. How do you interpret your estimate of this constant? How does it relate to your findings in Part (4)?
+
+
+```{r} 
+reg_2 <- lm(hwy ~ make + cty ,data = make_over)   #regression with the constant
+summary(reg_2)
+```
+
+After adding the intercept, the intercept is 6.87, representing the baseline value of highway fuel efficiency (hwy). In this case, BMW becomes the implicit baseline for the hwy standard. We can see that the coefficient for Toyota is -2.82, indicating that it travels 2.82 miles less per gallon compared to the reference brand (BMW in this case), which is consistent with the result we obtained in Part (4). 
+And the coefficient of cty is the same, which certify our inpretation.
+
+#### 6. For each car maker (make), compute the average fuel efficiency on highways in year 1990 and 2010, respectively, and use these values to compute the percentage change in fuel efficiency for each manufacturer between these 2 periods. State the 3 companies which achieved the largest increases in fuel efficiency during this time.
+
+```{r}
+CarData[, mean := mean(hwy), by = .(make,year)]          #generage the variable of mean by every make each year
+make_1990 <- CarData[year == 1990, .(make, mean)]        #spilt the data to 2 sets of only 1990 and 2010， only keep the make and mean variables
+make_2010 <- CarData[year == 2010, .(make, mean)]
+make_1990 <- make_1990[, .SD[1], by = make]              #only keep 1 for every make
+make_2010 <- make_2010[, .SD[1], by = make]
+make_com <- merge(make_1990, make_2010, by = "make")     #merge the 2 sets by make
+make_com <- make_com[, increase := (mean.y - mean.x)/mean.x]      #generage the variable of incerase by deduction
+setorder(make_com, -increase)                            #set the inverse order by "increase" variable
+make_com[1:3]$make                                       #show the resulet of biggest 3
+```
+
+### **2 Writing Loops and Functions (20 points)**
+
+#### 1. (8 points) Suppose you have a vector x. Write a function that gives out the maximum out of all elements of x that are smaller than 5. If no element is smaller than 5, it should return 0.
+
+```{r}
+Bigger5 <- function(x){          # set up the function
+  t <-  0                        # set up the loop factor
+for (i in 1:length(x)) {         # set up the loop 
+  if (x[i] < 5) {                # set up the first if 
+    if (x[i] > t) {              # set up the second if
+      t <- x[i]                  # if x[i] < 5 and x[i] bigger than x[i-1], make it as t
+    }
+  }
+}
+t                                # output the t
+}
+```
+Example Test:
+```{r}
+x1 <- c(3, 4, 5, 2, 5, 4, 2, 1, 4.999)
+Bigger5(x1) 
+```
+
+
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/Assgnments/Git/UF-ECO-7938/3/Pic/2.2.png")
+```
+
+```{r}
+nnmetrix <- function(x,n){                 # set up the function with 2 input x:matrix, n: dimention
+  z <- matrix(nrow = n, ncol = n)          # set up a empty n*n metrix
+for (i in 1:n) {                           # set up tht 1st loop
+  for (j in 1:n) {                         # 2nd loop, to achieve every z_ij
+     z[i,j] <- x[i,j]                      # replace the z_ij with x_ij
+  }
+}
+z                                          # output
+}
+```
+
+Example: set up a uniform random metrix to test.
+```{r}
+set.seed(123)                    # set up a random seed   
+random_matrix <- matrix(runif(400, min = 0, max = 1), nrow = 20, ncol = 20)   #set up the 20*20 metrix randomly
+
+nnmetrix(random_matrix, 6)       # run the function using n = 6
+```
+
+
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/Assgnments/Git/UF-ECO-7938/3/Pic/2.3.png")
+```
+
+```{r}
+t <- 0                                      # set up the initial outer sum value 
+for (i in 1:10) {                           # set up the outer sum loop
+  z <- 0                                    # set up the initial inner sum value    
+  for (j in 1:10) {                         # set uo the inner sum loop
+    I <- ifelse(i > j | j > 6 , 1, 0)       # set up the value function of I, with ifelse function
+    z <- z + I *(i + j)                     # calculation the sum of inner loop    
+  }
+  t <- t + z                                # calculate the sum of outer loop (total sum)
+}
+t                                           # output
+```
+
+#### **3.Crime and Gun Laws [40 points]**
+
+A large literature in Economics and beyond has tried to answer the question of how the availability of guns affects crime. Many papers have for example used the introduction of "shall-issue laws" in many states to answer this question which made it substantially easier to get a permit to carry a gun. Did these laws result in reductions of crime over time?
+
+###Data:
+To test this (and to practice regressions), the package "AER" has a data set on gun laws and crime by state. To get the data load the package AER and run:
+```{r}
+# Empty Environment
+rm(list = ls()) 
+```
+```{r}
+library("AER")
+data("Guns")
+data <- as.data.table(Guns)
+```
+
+###Main Variables of interest:
+violent: Violent crime rate (incidents per 100,000 members of the population)
+law: Does the state have a shall-carry law in effect in that year?
+
+###Questions:
+
+###1. Sort states according to the worst rate of violent crime in 1999
+```{r}
+setorder(data, -violent)
+head(data)
+```
+
+
+###2. Compute and plot the average rate of violent crime over all U.S. states over time.Compare it with the time series for New York State and Alaska.
+```{r}
+data <- data[, mean_vio := mean(violent), by = year]                      # generate the variable of mean (average)
+data_us <- data[, .SD[1], by = year][, .(year, mean_vio)]                 # generate the data set contains us average violent rate by year, only keep the first in each year, only keep variables of year, violent, (more clear)
+data_ny <- data[state == "New York",.(year, violent)]                     # generate the data set contains NY violent rate and year
+data_als <- data[state == "Alaska",.(year, violent)]                      # generate the data set contains Alaska violent rate and year
+data_com <- merge(data_us, data_ny, by = "year")                          # merge the 3 data set by "year" with 2 steps !
+data_com <- merge(data_com, data_als, by = "year")
+
+ggplot() +                                                                                        # ggplot in a chart
+  geom_point(data = data_com, aes(x = year, y = mean_vio, color = "Mean Violent Crime")) +        # ggplot us' data set by year
+  geom_point(data = data_com, aes(x = year, y = violent.x, color = "New York Violent Crime")) +   # ggplot ny's data set by year 
+  geom_point(data = data_com, aes(x = year, y = violent.y, color = "Alaska Violent Crime")) +     # ggplot als' data set by year
+  geom_smooth()
+```
+As the picture shown, the violent crime rate in the NYC is highest, followed by Alaska violent crime rate. Both of them higher than the average US violent crime rate with the majority of years.
+
+
+
+###3. Run a regression of the rate of violent crime on the law. What do you find?
+```{r}
+reg <- lm(violent ~ law, data = data)
+summary(reg)
+```
+The exists of law negatively affect the violent crime rate significantly with the coefficient of -161.19. The exists of this law can 
+decrease 161.19 of the violent crime rate (per 100,000 members of the population) compared with the case without this law.
+
+The R-squared and Adjusted R-squared value is relatively low, indicating that the model does not has a good fit.
+
