@@ -1,0 +1,185 @@
+# Assignment  3
+
+#### **Instructor: Prof. Gunnar Heins**
+
+#### **Teaching Assistant: Pedro de Sousa Almeida**
+
+#### Student:    C.H.(Chenhui Lu)
+
+#### UFID:       76982846
+
+===============================================================================
+
+```{r}
+# Empty Environment
+rm(list = ls()) 
+library("data.table")
+```
+
+```{r}
+#library
+library("data.table")
+library("stargazer")
+library("AER")
+library("ggplot2")
+library("ggrepel")
+```
+
+### **1 Plots in R [40 points]**
+
+```{r}
+# inport the data
+dt <- fread("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/Assgnments/Git/UF-ECO-7938/4/trade_data.csv")
+```
+
+#### 1. Compute the number of countries from which the U.S. imported in each year. Create a plot with year on the x-axis and the number of countries on the y-axis using ggplot2.
+
+```{r}
+dt <- dt[, N := .N, by = "year"]     # generate the number of countries from which the U.S. imported in each year
+dt_n <- dt[, .SD[1], by = "year"]    # only keep the first one by each year.
+
+ggplot(dt_n, aes(year, N)) + geom_point() + labs(title = "The number of countries from which the U.S. imported in each year", x = "year", y ="The number of countries") + theme(plot.title = element_text(hjust = 0.5)) + geom_smooth()                       # ggpolt 2 with "year " and "N"
+```
+
+#### 2. Identify the 5 countries, for which the increase in the U.S. import share was strongest between 1995 and 2010. [Hint: it might be easiest to create a sub - dataset for both 1995 and 2010 and then use merge()]
+
+```{r}
+dt_1995 <- dt[year == 1995]                                   # set up the 1995 sub dataset
+dt_2010 <- dt[year == 2010]                                   # set up the 2010 sub dataset
+dt_com <- merge(dt_1995,dt_2010, by = "region")               # merge the 2 sub datasets
+dt_com <- dt_com[, diff := import_share.y - import_share.x]   # generate the virable of difference
+setorder(dt_com, -diff)                                       # set order of decreasing with difference
+dt_com[1:5]$region                                            # output the first 5
+```
+
+#### 3. Use ggplot2 to create a single plot with the share of each trade partner in total U.S. imports over time. Include only China, Mexico, Canada, and France and briey describe the plot. Qualitatively, your graph should look similar to this one:
+```{r}
+dt_3 <- dt[region == "China" |region == "Mexico" |region == "Canada" |region == "France"]     # set up the set which only keep the China, Mexico....
+
+P <- ggplot(dt_3, aes(year, import_share, group = region, colour = region)) + geom_point() + geom_smooth() + labs(title = "The share of each trade partner in total U.S. imports over time", x = "year", y ="import share") + theme(plot.title = element_text(hjust = 0.5))       # generage P : ggplot with x = year, y = import_share, show in the same picture from different group of region.
+P                # show the picture p
+```
+
+#### 4. Use facet wrap() to create a plot that shows each time series separately instead:
+
+```{r}
+P4 <- P + facet_wrap(~ region , ncol=2)      # split the one picture within 4 group to 4 separete picture.
+P4                                           # show the picture p4.
+```
+
+#### **2 Datasets in R (60 points)**
+
+This question will ask you to use a by now familiar dataset to practice plots and visualization in R. 
+Import the dataset "Guns" which is part of the package "AER". Get the data with
+```{r}
+data("Guns")                          # improt data
+Guns <- as.data.table(Guns)           # data table
+```
+#### Main Variables of interest:
+**violent:** Violent crime rate (incidents per 100,000 members of the population).
+
+**law:** Does the state have a shall-carry law in effect in that year?
+
+**robbery:** Robbery rate (incidents per 100,000).
+
+**prisoners:** Incarceration rate in the state (sentenced prisoners per 100,000 residents).
+
+**male:** Percent of state population that is male, ages 10 to 29.
+
+**income:** Real per capita personal income in the state (US dollars).
+
+**density:** Population per square mile of land area, divided by 1,000.
+
+
+#### 1. Use stargazer to create a text file with summary statistics.
+```{r}
+stargazer(Guns, type = "text", title = "summary statistics", digits = 2, out = "/Users/terrylu/Desktop/UF/fall/R and Matlab/R/Assgnments/Git/UF-ECO-7938/4/output/summary.txt")
+```
+#### 2. Compute the average rate of robberies (name it avg robberies) as well as the average income (name_ _it avg_income) for each state and add both variables to the dataset. Which are the 5 states with the highest average rate of robberies?
+
+```{r}
+Guns <- Guns[, "avg_robberies" := mean(robbery), by = state]   # generate the ave robberies by state
+Guns <- Guns[, "avg_income" := mean(income), by = state]       # generate the ave imcome by state
+Guns_1state <- Guns[, .SD[1], by = "avg_robberies"]            # only keep the first 1 each state
+setorder(Guns_1state, -"avg_robberies")                        # set the order of avg robberies decresing
+Guns_1state[1:5]$state                                         # output the first 5 states' name
+```
+#### 3. Remove the outlier "District of Columbia" from the dataset and create a plot with avg income on the x-axis and avg robberies on the y-axis using ggplot2. Label each data point with the respective state's name. Your plot should roughly look like this:
+
+```{r}
+Guns_1state <- Guns_1state[state != "District of Columbia"]    # creat the dataset without the state of D.C.
+
+ggplot(Guns_1state, aes(avg_income, avg_robberies, label = state)) + geom_text_repel(size = 2) + labs(title = "The average robberies rate with average income", x = "average income", y ="average robberies rate") + theme(plot.title = element_text(hjust = 0.5)) + geom_smooth()                     #ggplot with geom_text_repel()function.
+
+```
+
+
+#### What does this plot tell you about the relationship between income and crime?
+Generally speaking, the higher average income region with higher average robberies rate. However, when average income level higher than around 17,000, the robberies rate falls.
+
+#### 4. Regress log(violent) on male, density, and log(income). Briey describe the results. What is the interpretation of the coeffcient on log(income)?
+
+```{r}
+reg <- lm(log(violent) ~ male + density + log(income), data = Guns)   # regression 
+summary(reg)                                                          # summary of the regression
+```
+From the regression result, we can see:
+1. Male: the regression result is not significant in male rate variable, so the gender density of the male actually do not affect the violent rate significantly.
+2. Population density: this variable affect the violent crime rate significantly positively. The coefficient shows that increase every 1000 population per square mile of land area, the violent crime rate will increase 13.8%.
+3. Income: This is also significant. Increasing each 1% income level, the violent crime rate will increase 1.006%.
+
+#### 5. Compute the standard errors of the previous regression, but by using bootstrap. Set B to 100. Do not use one of R's functions that compute bootstrap standard errors such as "bootstrap".
+
+```{r}
+## Step 1. First, create a record matrix to store the coefficients we estimate in the process:
+B = 2000                                    # Number of Bootstrap steps         
+coeffs_bt <- matrix(0, nrow = B, ncol = 4)      # create the metrix which contains the each coefficients which generated by bootstrap each time.
+                                                # 4：how many coefficients we need (inclouding intersept)
+ 
+## Step 2. Order the original observations
+N <- nrow(Guns)                                 # Size of the Dataset
+## this is already done: Guns <- as.data.table(Guns)
+Guns <- Guns[ , obs_id := 1:N]                  # Order the original observations
+
+## Step 3. Bootstrap experiments.
+for (i in 1:B) {                         # do the experiments B times
+
+  
+  # 3.1. Step: Randomly draw N observations from your original dataset
+  Guns_bt <- Guns[sample(1:N, replace=TRUE),]        # Draws randomly N observations from your dataset, the observations can be celected my multipal times.      
+  
+  # 3.2. Run the regression you're interested in on this "new" dataset
+  reg_bt <- lm(log(violent) ~ male + density + log(income), data = Guns_bt)
+  
+  # 3.3. Save the estimated coefficient
+  coeffs_bt[i,] <- coefficients(reg_bt)     # give the bootstrap's results to the record metrix
+  
+  # 3.4. Repeat this step B times!
+}                                           # Now we get the record coefficients metrix full.
+
+# Step 4. To compute standard errors compute the standard deviation across all the estimates you got:
+
+beta_bt <- colMeans(coeffs_bt)         # Coefficients mean (not necessary here, just for notes)
+beta_bt
+```
+coefficients above(not asked though)
+
+```{r}
+var(coeffs_bt)                         # Covariance Matrix (Diagonal elements is the variance of the coefficients), (not necessary here, just for notes)
+```
+Covariance Matrix above, it's not asked though.
+
+```{r}
+SE <- apply(coeffs_bt, 2, sd)            #calculation the stand errer.
+SE
+```
+
+#### 6. Compute the growth rate in the number of sentenced prisoners per 100,000 residents in each state between 1977 and 1999. Which 3 states had the highest growth rates during that time period?
+```{r}
+Guns_1977 <- Guns[year == 1977, .(year, state, prisoners)]     # create the 1977 dataset
+Guns_1999 <- Guns[year == 1999, .(year, state, prisoners)]     # create the 1999 dataset
+Guns_com2 <- merge(Guns_1977,Guns_1999, by = "state")          # merge 2 sets 
+Guns_com2 <- Guns_com2[, diff := (prisoners.y - prisoners.x)/prisoners.x] # generate the growth rates  
+setorder(Guns_com2, - diff)                                    # set the order of decreasing with growth rates
+Guns_com2[1:3]$state                                           # output the highest 3 
+```
