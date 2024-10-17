@@ -1,0 +1,142 @@
+# Assignment  3
+
+#### **Instructor: Prof. Gunnar Heins**
+
+#### **Teaching Assistant: Pedro de Sousa Almeida**
+
+#### Student:    C.H.(Chenhui Lu)
+
+#### UFID:       76982846
+
+===============================================================================
+```{r}
+# Empty Environment
+rm(list = ls()) 
+```
+
+```{r}
+#library
+library("data.table")
+library("stargazer")
+library("AER")
+library("ggplot2")
+library("ggrepel")
+library("maps")
+library("dplyr")
+library("mapproj")
+```
+
+### **1 Local Labor Markets [35 points]**
+Frequently researchers use variation across regions for empirical research. Especially useful
+is that the U.S. census collects a wide range of data on U.S. counties. There are more than
+3,000 such counties and for each of them you can and detailed information on demographics,
+the economy, employment, or elections.
+Often researchers use this type of data to draw conclusions on the people that live in this
+areas. For example, if a county has a very educated population on average as well as a high
+income per capita, one might conclude that education translates into higher earnings. In
+this question, I ask you to check if some common trends can be identified from county data.
+Variables:
+fipstate: Code, identifying a state (e.g. 1 for Alabama, 2 for Arizona, etc)
+fipscty: Code, identifying a county within a state (Alachua County in Florida has code 1,
+for example)
+share white i: Share of white individuals in year i
+share black i: Share of black individuals in year i
+share college i: Share of individuals with at least a college degree in year i
+share female i: Share of women in a county in year i
+income i: Income per capita in year i
+mfg i: Number of workers employed in manufacturing in year i
+population i: County population in year i
+
+##### **Questions:**
+#### 1. Import the dataset CountyDemographics.csv using fread(). Create a variable with the percentage change in income between 1990 and 2010 and add it to the dataset. Delete observations for which this percentage change is NA or Inf.
+```{r}
+# inport the data
+dt <- fread("/Users/terrylu/Desktop/UF/fall/R and Matlab/Matlab/assignment/Problem Set 5/CountyDemographics.csv")
+
+dt <- dt[, income_change_1090 := (income_10 - income_90)/income_90]    #create the income change percentage
+dt <- dt[is.na(income_change_1090) == FALSE]                           # delete the observations with income_change of N/A
+dt <- dt[is.infinite(income_change_1090) == FALSE]                     # delete the observations with income_change of Inf
+```
+
+##### 2. The following commands create a map in R. In order to do so, first install packages "maps", "dplyr" and "mapproj" and load them via library("maps"), library("dplyr") and library("mapproj"). What does this particular map that R creates show?
+
+```{r}
+DataCounty <- map_data("county")
+CountyDemographics <- fread("/Users/terrylu/Desktop/UF/fall/R and Matlab/Matlab/assignment/Problem Set 5/CountyDemographics.csv")
+
+DataCounty <- merge(DataCounty, CountyDemographics, by = c("region", "subregion"), all = F)   #merge datasets by "region", "subregion"
+
+DataCounty <- as.data.table(DataCounty)
+setkey(DataCounty, order)
+
+DataCounty[ , D_income := (income_10 - income_80) / income_80]      #generate the percentage income change between 1910 and 1980
+DataCounty[D_income > 5 , D_income := 5]                            #any value of D_income bigger 5, changes to 5
+ggplot(data = DataCounty, aes(x = long, y = lat, fill = D_income, group = group)) + geom_polygon(colour="black")                               #crate the map by D_change.
+```
+
+I prefer no border color for polygons. And color from black to blue to white. 
+```{r}
+ggplot(data = DataCounty, aes(x = long, y = lat, fill = D_income, group = group)) + geom_polygon() + scale_fill_gradientn(colors = c("#000033", "#041f4b", "#08306b", "#08519c", "#2171b5", "#4292c6", "#6baed6", "#9ecae1", "#c6dbef", "#deebf7"))
+```
+This heatmap shows different percentage income change in different county. Brighter area shows higher persentage income change.
+
+##### 3. During the last presidential campaigns, it has often been pointed out that especially white men with comparably low education have suffered economically. Regress the percentage change in income between 1980 and 2010 on the share of white residents in a county in 1990, the share of women in 1990, and the share of college educated residents in 1990. What do you find?
+```{r}
+dt <- dt[ , D_income_1080 := (income_10 - income_80) / income_80]      #generate the percentage income change between 1910 and 1980
+dt <- dt[is.na(D_income_1080) == FALSE]                           # delete the observations with income_change of N/A
+dt <- dt[is.infinite(D_income_1080) == FALSE]                     # delete the observations with income_change of Inf
+reg_3 <- lm(D_income_1080 ~ share_white_90 + female_90 + college_90, data = dt)    #regession
+summary(reg_3)
+```
+1. The share of white residents (share_white_90) has a negative significant impact on percentage income change. For each 1%  increase in the share of white residents (coefficient = -0.382), the percentage change in income will decrease by 0.382%. 
+2. The share of women (female_90) doesn't has a significant impact on percentage income change. 
+3. The share of college-educated residents (college_90) has a positive significant impact on percentage income change. For each 1% increase in the share of college-educated residents (coefficient = 1.40771), the percentage change in income will increase by 1.40771%.  
+
+##### 4. Another common claim is that international trade has resulted in high employment losses since the 1990s. As particularly manufacturing goods are traded, researchers often use the manufacturing employment share as a measure of how exposed a region or country is exposed to trade. In order to evaluate this claim, let's import an additional dataset on manufacturing employment: Match the dataset data inc pop.csv to CountyDemographics using merge and the variable "fips" as identifier.
+```{r}
+inc_pop <- fread("/Users/terrylu/Desktop/UF/fall/R and Matlab/Matlab/assignment/Problem Set 5/data_inc_pop.csv")
+dtmg <- merge(inc_pop, dt, by = "fips")
+```
+
+##### 5. Create the manufacturing employment share by dividing the number of workers in manufacturing by the population in each county. Create this variable for the years 1990, 2000, and 2010.
+```{r}
+dtmg <- dtmg[, emp_share_90 := mfg_90/population_90]   #Create the manufacturing employment share
+dtmg <- dtmg[, emp_share_00 := mfg_00/population_00]
+dtmg <- dtmg[, emp_share_10 := mfg_10/population_10]
+```
+
+##### 6. Compute the average manufacturing employment share in 1990, 2000, and 2010 over all counties. How did it change over time?
+```{r}
+dtmg <- dtmg[, ave_share_90 := mean(emp_share_90)]  #Compute the average manufacturing employment share
+dtmg <- dtmg[, ave_share_00 := mean(emp_share_00)] 
+dtmg <- dtmg[, ave_share_10 := mean(emp_share_10)] 
+dtmg_1 <- dtmg[, .SD[1]]
+
+dtmg_1$ave_share_90
+dtmg_1$ave_share_00
+dtmg_1$ave_share_10
+```
+The average manufacturing employment share is decreasing with the time.
+
+##### 7. Create a map similarly to the one created in part 2 that shows counties according to their manufacturing employment share in 1990. Do you see much overlap with the map you created in part (2)?
+```{r}
+map_dtmg <- merge(DataCounty,dtmg, by = c("region", "subregion"), all = F)   #merge datasets by "region", "subregion"
+
+ggplot(data = map_dtmg, aes(x = long, y = lat, fill = emp_share_90, group = group)) + geom_polygon() + scale_fill_gradientn(colors = c("#08306b", "#08519c", "#2171b5", "#4292c6", "#6baed6", "#9ecae1", "#c6dbef", "#deebf7","#f7fbff"))
+# create the heatmap, I prefer no border color for polygons. Color from black to blue to white.
+```
+No, the two heatmaps do not overlap, actually they are opposite to some extent.
+
+##### 8. Regress the percentage change in income on the manufacturing share in 1990. Include the regressors from (3) as controls. What do you find?
+
+First of all, I don't understand the meaning of percentage change in income in 1990. If we want to talk about the change, there should be 2 time points, however, here's only one time point (1990).
+So I assume that the problem want to ask the change between 1980 to 2010 to fit the question (3).
+```{r}
+reg8 <- lm(income_change_1090 ~ emp_share_90 + share_white_90 + female_90 + college_90, data = dtmg)
+summary(reg8)
+```
+The coefficient of the manufacturing share in 1990 (emp_share_90) has a significantly negative impact on the the percentage change in income on actuaally, which is coincide with what maps show.
+
+
+
+
