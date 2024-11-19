@@ -1,0 +1,295 @@
+# Assignment  7
+
+#### **Instructor: Prof. Gunnar Heins**
+
+#### **Teaching Assistant: Pedro de Sousa Almeida**
+
+#### Student:    C.H.(Chenhui Lu)
+
+#### UFID:       76982846
+
+===============================================================================
+
+```{r}
+# Empty Environment
+rm(list = ls()) 
+```
+
+```{r}
+#library
+library("data.table")
+library("stargazer")
+library("AER")
+library("ggplot2")
+library("ggrepel")
+library("maps")
+library("dplyr")
+library("mapproj")
+```
+
+### **1 OLS Regressions [35 points]**
+
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/1.1.png")
+```
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/1.11.jpeg")
+```
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/1.2.jpeg")
+```
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/1.22.jpeg")
+```
+
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/1.3.png")
+```
+Yes, I do believe that qi is correlated with pi.
+Since in the reality, higher priced car alwasy implies higher quality, otherwise the comsumers will not buy it. One the other hand, if a firm want to produce a new model which is high quality, it always has higher price due to the higher cost.
+
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/1.4.jpeg")
+```
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/1.5.jpeg")
+```
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/1.6.jpeg")
+```
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/1.7.jpeg")
+```
+
+### **2 Simulations, Omitted Variable Bias, and Controls [30 points]**
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/2.1.jpeg")
+```
+```{r}
+N <-100                             # 100 samples
+a <- rnorm(N, mean = 2, sd = 2.5)    # nomal random the ability
+
+gamma <-  0                           # suppose the gamma = 1
+x <- rnorm(N, mean = 8, sd = 2) + gamma * a   # get the education level based on gamma = 0
+
+beta0 <- 0.5       # coefficents
+beta1 <- 1.5
+beta2 <- 0.8
+
+epsilon <- rnorm(N, mean = 0, sd = 1)    # assume the error follows standard normal dist.
+
+##### do we need to apply epsilon here?
+y = beta0 + beta1 * x + beta2 * a
+
+summary(x)
+```
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/2.2.png")
+```
+```{r}
+y_obs <- y + rnorm(N, mean = 0, sd = 3.5)
+reg2.2 <- lm(y_obs ~ x)
+summary(reg2.2)
+cat("real β1 =", beta1, "\n")
+cat("estimated β1 =", coef(reg2.2)[2], "\n")
+```
+NO, it's not really close.
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/2.3.png")
+```
+```{r}
+N <-100000                            # 100 samples
+a <- rnorm(N, mean = 2, sd = 2.5)    # nomal random the ability
+
+gamma <-  0                           # suppose the gamma = 1
+x <- rnorm(N, mean = 8, sd = 2) + gamma * a   # get the education level based on gamma = 0
+
+beta0 <- 0.5       # coefficents
+beta1 <- 1.5
+beta2 <- 0.8
+
+y = beta0 + beta1 * x + beta2 * a
+
+y_obs <- y + rnorm(N, mean = 0, sd = 3.5)
+reg2.3 <- lm(y_obs ~ x)
+summary(reg2.3)
+
+cat("real β1 =", beta1, "\n")
+cat("estimated β1 =", coef(reg2.3)[2], "\n")
+```
+YES, it's closer.
+
+Now, try lower σϵ,for example  3.5, 0.35, 0.035, 0.0035, 0.00035, 0.000035:
+```{r}
+N <-100000                            # 100 samples
+a <- rnorm(N, mean = 2, sd = 2.5)    # nomal random the ability
+
+gamma <-  0                           # suppose the gamma = 1
+x <- rnorm(N, mean = 8, sd = 2) + gamma * a   # get the education level based on gamma = 0
+
+beta0 <- 0.5       # coefficents
+beta1 <- 1.5
+beta2 <- 0.8
+
+y = beta0 + beta1 * x + beta2 * a
+
+σϵ_samples <- c(3.5, 0.35, 0.035, 0.0035, 0.00035, 0.000035)
+
+for (i in σϵ_samples){
+  y_obs <- y + rnorm(N, mean = 0, sd = i) 
+  reg2.3 <- lm(y_obs ~ x)
+  summary(reg2.3)
+  
+  cat("when σϵ =", i, "\n")
+  cat("real β1 =", beta1, "\n")
+  cat("estimated β1 =", coef(reg2.3)[2], "\n")
+  cat("  ", "\n")
+  }
+```
+It does not really matter, since the difference between real β1 and estimated β1 doesn't merge to 1.5
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/2.4.png")
+```
+```{r}
+N <-100000                            # 100 samples
+a <- rnorm(N, mean = 2, sd = 2.5)    # nomal random the ability
+
+gamma <-  1                           # suppose the gamma = 1
+x <- rnorm(N, mean = 8, sd = 2) + gamma * a   # get the education level based on gamma = 0
+
+beta0 <- 0.5       # coefficents
+beta1 <- 1.5
+beta2 <- 0.8
+
+y = beta0 + beta1 * x + beta2 * a
+
+y_obs <- y + rnorm(N, mean = 0, sd = 3.5)
+reg2.3 <- lm(y_obs ~ x)
+summary(reg2.3)
+
+cat("real β1 =", beta1, "\n")
+cat("estimated β1 =", coef(reg2.3)[2], "\n")
+```
+estimated β1 is higher than real β1.
+Yes, since the regression omitted the αi, the results has the omitted variable bias, which means the estimated β1 is biased.
+Since the cov(xi, αi) is positive, and gamma is positive, then estimated β1 should be always higher than real β1 (as the equation we shown above Problem 1.4)
+
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/2.5.png")
+```
+```{r}
+N <-100000                            # 100 samples
+a <- rnorm(N, mean = 2, sd = 2.5)    # nomal random the ability
+
+gamma <-  1                           # suppose the gamma = 1
+x <- rnorm(N, mean = 8, sd = 2) + gamma * a   # get the education level based on gamma = 0
+
+beta0 <- 0.5       # coefficents
+beta1 <- 1.5
+beta2 <- 0.8
+
+y = beta0 + beta1 * x + beta2 * a
+
+y_obs <- y + rnorm(N, mean = 0, sd = 3.5)
+reg2.3 <- lm(y_obs ~ x + a)
+summary(reg2.3)
+
+cat("real β1 =", beta1, "\n")
+cat("estimated β1 =", coef(reg2.3)[2], "\n")
+```
+Yes, since we included the variable αi in, this elimated the β1's bias, and make the estimate unbiased.
+
+### **3 Instrumental Variables [35 points]**
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/3.1.png")
+```
+```{r}
+# inport the data
+dt <- fread("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/data_card.csv")
+```
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/3.2.png")
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/3.22.png")
+```
+```{r}
+dt[ , exper2 := (exper^2)]
+reg3.2 <- lm(log(wage) ~ educ + exper + exper2 + black + south + smsa + reg661 + reg662 + reg663 + reg664 + reg665 + reg666 + reg667 + reg668 + smsa66, data = dt)
+
+summary(reg3.2)
+```
+Two results are the same.
+
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/3.3.png")
+```
+```{r}
+reg3.3 <- lm(log(wage) ~ educ + exper + exper2 + black + south + smsa + nearc4 + reg661 + reg662 + reg663 + reg664 + reg665 + reg666 + reg667 + reg668 + smsa66, data = dt)
+
+summary(reg3.3)
+```
+No, the variable near4 is not significant as shown above. Which means near4 does not aaffect the log(wage) directly, satisfying one of the requirement of IV.
+
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/3.4.png")
+```
+```{r}
+reg3.4 <- ivreg(log(wage) ~ educ + exper + exper2 + black + south + smsa + reg661 + reg662 + reg663 + reg664 + reg665 + reg666 + reg667 + reg668 + smsa66 | nearc4 + exper + exper2 + black + south + smsa + reg661 + reg662 + reg663 + reg664 + reg665 + reg666 + reg667 + reg668 + smsa66, data = dt)
+
+summary(reg3.4)
+
+cat("β1(OLS) =", coef(reg3.2)[2], "\n")
+cat("β1(IV) =", coef(reg3.4)[2], "\n")
+```
+β1(IV) is significant too, moreover the coefficent of β1(IV) is higher than earlier estimates β1(OLS). Which means increasing every 1 unit of education imput, the wage will increase 13.15%.
+
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/3.5.png")
+```
+
+
+We regression with model:
+educ = β0 + β1 * nearc2 + β2 * nearc4 + βi * X + ϵ;
+X contains all control variables.
+```{r}
+reg3.51 <- lm(educ ~ nearc2 + nearc4 + exper + exper2 + black + south + smsa + reg661 + reg662 + reg663 + reg664 + reg665 + reg666 + reg667 + reg668 + smsa66, data = dt)
+summary(reg3.51)
+```
+As shown above, nearc4 is significant while nearc2 is not. Then we will take nearc4 as IV.|
+2SLS:
+log(wage) = β0 + β1 * educ  + βi * X + ϵ;
+educ = α0 + α1 * nearc4 + u
+
+β1(IV) = est_cov(nearc4, log(wage))/est_cov(nearc4,educ)
+```{r}
+reg3.52 <- ivreg(log(wage) ~ educ + exper + exper2 + black + south + smsa + reg661 + reg662 + reg663 + reg664 + reg665 + reg666 + reg667 + reg668 + smsa66 | nearc2 + nearc4 + exper + exper2 + black + south + smsa + reg661 + reg662 + reg663 + reg664 + reg665 + reg666 + reg667 + reg668 + smsa66, data = dt)
+
+summary(reg3.52)
+
+cat("β1(IV1) =", coef(reg3.4)[2], "\n")
+cat("β1(IV2) =", coef(reg3.52)[2], "\n")
+
+
+```
+β1(IV2) is significant too, moreover the coefficent of β1(IV2) is higher than earlier estimates β1(IV1). Which means increasing every 1 unit of education imput, the wage will increase 15.7%.
+However, the IV nearc2 is not a strong instrumental variable，so we need to be more cautious and discuss more about using nearc2 and nearc4 as IVs.
+
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/3.6.png")
+```
+IQ = β0 + β1 * nearc4 + ϵ
+```{r}
+reg3.6 <- lm(IQ ~ nearc4, data = dt)
+summary(reg3.6)
+```
+No, since the regression shows nearc4 significantly related with IQ with coefficent of 2.5962.
+Therefore, nearc4 is not a completely exogenous instrumental variable, cov(nearc4, ϵ_log(wage)) ≠ 0
+
+```{r}
+knitr::include_graphics("/Users/terrylu/Desktop/UF/fall/R and Matlab/R/After 2nd Midterm/Assignment/Problem_Set_7/HW7/3.7.png")
+```
+```{r}
+reg3.7 <- lm(IQ ~ nearc4 + smsa66 + reg661 + reg662 + reg669, data = dt)
+summary(reg3.7)
+```
+IQ is not correlated with nearc4 any more.
+When we using nearc4 as IV, it's important to include these control variables in the IV regression model to ensure the exogeneity of the instrumental variable, on the other hand, to ensure cov(nearc4, ϵ_log(wage)) = 0
